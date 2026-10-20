@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Neon Grip: Протокол "Хват"
+  Ключевые требования из ТЗ:
+  • Строго горизонтальная ориентация (sensorLandscape, но игра рассчитана на landscape)
+  • Immersive sticky — блокируем системные свайпы (Назад/Домой), чтобы мультитач не отменялся
+  • Edge-to-edge + WindowInsets → Safe Area (чёлка не перекрывает игровое поле)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" /> <!-- OpenGL ES 3.0 -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+
+    <!-- Вибро-отдача для "тактильной" стрельбы и рывков -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:hardwareAccelerated="true"
+        android:theme="@style/Theme.NeonGrip.Fullscreen">
+
+        <activity
+            android:name=".NeonGripActivity"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|density"
+            android:resizeableActivity="false"
+            android:launchMode="singleTask">
+
+            <!-- Отключаем предсказательную навигацию/жесты, перехватывающие касания у края экрана -->
+            <meta-data
+                android:name="android.max_aspect"
+                android:value="2.4" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
