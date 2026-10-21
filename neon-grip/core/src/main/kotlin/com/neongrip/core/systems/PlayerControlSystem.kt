@@ -106,6 +106,19 @@ class PlayerControlSystem(
         state.finishReload()
     }
 
-    private fun findWeakSpotTarget(pos: Position): EntityRef? = null // TODO: nearest hostile weak-spot
+    private fun findWeakSpotTarget(pos: Position): EntityRef? {
+        // Автонаведение «Адреналина»: ближайшая живая враждебная сущность (любой фракции,
+        // кроме PLAYER) — в crossfire-боу это подсказка игроку, кого боты косят друг друга
+        var best = -1
+        var bestD2 = Float.MAX_VALUE
+        world.iterate(Position::class, Health::class, FactionComponent::class) { e, p, hp, fc ->
+            if (fc.faction == Faction.PLAYER || hp.current <= 0) return@iterate
+            val dx = p.x - pos.x; val dy = p.y - pos.y
+            val d2 = dx * dx + dy * dy
+            if (d2 < bestD2) { bestD2 = d2; best = e.id() }
+        }
+        return if (best >= 0) EntityRef(best) else null
+    }
+
     private fun spawnSyncFinisher(x: Float, y: Float) { /* Shockwave или GravityMine из пула */ }
 }

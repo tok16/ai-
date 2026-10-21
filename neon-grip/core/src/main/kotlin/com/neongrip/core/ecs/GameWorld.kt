@@ -44,19 +44,30 @@ class GameWorld(val state: GameState) {
         component { PredictorTurretTag() }
         component { ShieldBearerTag() }
         component { SniperTag() }
+        component { BotTag() }
+
+        // Фракции и целеуказание ботов («убивают друг друга и игрока»)
+        component { FactionComponent(Faction.HOSTILE) }
+        component { LastDamagedBy() }
+        component { BotTargeting() }
+        component { BotMovement() }
 
         // Пули НЕ компонентами-сущностями: они живут в пулах BulletSystem
         // (1000 предзаполненных объектов, zero-allocation в бою).
 
-        // ── Системы. Порядок важен: ввод → движение → AI → пули → коллизии → рендер ──
+        // ── Системы. Порядок важен: ввод → движение → таргетинг → AI → locomotion ботов →
+        //    огонь ботов → пули → коллизии → рендер ──
         systems {
             val bullets = BulletSystem(state)
             add(
                 PlayerControlSystem(state, grip) { bullets },
                 MovementSystem(),
+                TargetingSystem(),               // выбор целей: игрок ИЛИ конкурент-бот
                 EnemyAiSystem(state, state.scope),
+                BotLocomotionSystem(),           // линии фронта Alpha/Bravo сходятся — crossfire неизбежен
+                BotCombatSystem(bullets),        // упреждающий огонь + детонации камикадзе
                 bullets,
-                CollisionSystem(state, bullets),
+                CollisionSystem(state, bullets), // faction-aware: crossfire косят и ботов
                 FxParticlePoolSystem(),
                 NeonRenderSystem(state, grip),
             )
@@ -66,6 +77,8 @@ class GameWorld(val state: GameState) {
     fun update(dt: Float) {
         // Bullet-time: игрок «скользит» между почти стоящими пулями.
         val scale = if (state.adrenalineActive.value) TIME_SCALE_ADRENALINE else timeScale
+        // Адреналин «подсвечивает» игрока — все фракции видят его как цель (TargetingSystem)
+        TargetingSystem.adrenalineFlag = state.adrenalineActive.value
         grip.update(dt)
         world.update(dt * scale)
     }

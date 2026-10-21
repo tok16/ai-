@@ -6,15 +6,21 @@ import com.neongrip.core.components.*
 import com.neongrip.core.state.GameState
 
 /**
- * Коллизии «пуля ↔ сущность» через пространственную сетку (spatial hash grid).
- * Перебор O(n²) недопустим при сотнях пуль — grid даёт ~O(n).
+ * Faction-aware коллизии «пуля ↔ сущность»: один проход по живым пулям за кадр.
  *
- * Ключевые правила из ТЗ:
- *  • Игрок в i-frames пересекает вражескую пулю → piercedBullet=true → Адреналин
+ * Ключевые правила:
+ *  • Пуля наносит урон только сущностям враждебной фракции (Faction.isHostileTo):
+ *      PLAYER-пуля → боты обоих отрядов охраны;
+ *      HOSTILE-пуля бота Alpha → боты Bravo и игрок, и наоборот
+ *      (crossfire: два отряда охраны убивают ДРУГ ДРУГА на глазах игрока);
+ *      дружественный огонь внутри отряда выключен — волна не стирает себя сама.
+ *  • Игрок в i-frames пересекает чужую пулю → piercedBullet=true → Адреналин
  *    (bullet-time 2 сек + автонаведение на уязвимые точки).
- *  • Щитоносцы (Фаланга): фронтальный щит блокирует урон — бить можно только со спины,
- *    куда игрок попадает рывком (палец 3), продолжая стрелять правым стиком.
- *  • Снайперский луч имеет «слепую зону»: пересечь её можно только рывком.
+ *  • Щитоносцы (Фаланга): фронтальный щит блокирует урон с любой стороны —
+ *    бить можно только со спины. Это работает и против ботов: фаланга прикрывает
+ *    от перестрелки конкурентов, пока игрок не обойдёт её рывком.
+ *  • Убийство засчитывается игроку ТОЛЬКО если последний удар нанёс его снаряд
+ *    (LastDamagedBy) — синхронизация комбо «Нейросеть» не капает за чужие смерти.
  */
 class CollisionSystem(
     private val state: GameState,
@@ -23,90 +29,105 @@ class CollisionSystem(
 
     override var interval = 1
 
-    // cellSize подобран под радиусы hitbox'ов (~64px при камере 1:1)
-    private val grid = SpatialGrid(cellSize = 64f)
+    /** Снимок живых целей на кадр: переиспользуемые массивы — ноль аллокаций в бою */
+    private val ids = ArrayList<Int>(256)
+    private val xs = FloatArray(512)
+    private val ys = FloatArray(512)
+    private val rs = FloatArray(512)
+    private var count = 0
 
     override fun update() {
-        grid.clear()
+        rebuildSnapshot()
 
-        // 1. Индексация живых целей по сетке
-        world.iterate(Position::class, Hitbox::class) { entity, pos, hb ->
-            grid.insert(entity.id(), pos.x, pos.y, hb.radius)
+        bullets.forEachLive { b ->
+            if (!b.alive) return@forEachLive          // могла погаснуть в этом же проходе
+            val hit = findVictim(b)
+            if (hit >= 0) applyHit(b, hit)
+            b.alive = false                            // пуля гаснет: возврат в пул
+        }
+    }
+
+    private fun rebuildSnapshot() {
+        count = 0
+        ids.clear()
+        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) {
+                entity, pos, hb, _, _ ->
+            if (count >= xs.size) return@iterate       // жёсткий потолок снимка (перф-гарантия)
+            ids.add(entity.id())
+            xs[count] = pos.x; ys[count] = pos.y; rs[count] = hb.radius
+            count++
+        }
+    }
+
+    /** Первый попавшийся враг фракции пули под траекторией; -1 если мимо всех (грубый скан) */
+    private fun findVictim(b: Bullet): Int {
+        for (i in 0 until count) {
+            val dx = xs[i] - b.origin.x; val dy = ys[i] - b.origin.y
+            val r = rs[i] + BULLET_HIT_R
+            if (dx * dx + dy * dy < r * r && isTargetable(ids[i], b.faction)) return ids[i]
+        }
+        return -1
+    }
+
+    private fun isTargetable(id: Int, bulletFaction: Faction): Boolean {
+        val e = world.entity(id)
+        val fc = e[FactionComponent::class] ?: return false
+        return bulletFaction.isHostileTo(fc.faction)
+    }
+
+    private fun applyHit(b: Bullet, victimId: Int) {
+        val victim = world.entity(victimId)
+        val vPos = victim[Position::class] ?: return
+        val health = victim[Health::class] ?: return
+
+        // ── Фаланга: фронтальный щит держит удар с ЛЮБОЙ враждебной стороны ──
+        if (victim contains ShieldBearerTag::class) {
+            val rot = victim[Rotation::class] ?: return
+            val angleToShot = Math.toDegrees(
+                Math.atan2((b.origin.y - vPos.y).toDouble(), (b.origin.x - vPos.x).toDouble())
+            ).toFloat()
+            val diff = kotlin.math.abs(((angleToShot - rot.degrees + 540) % 360) - 180)
+            if (diff > 180 - SHIELD_ARC_DEG / 2f) return   // пуля звякнула о щит
         }
 
-        // 2. Пули игрока → hostile-сущности (учёт угла попадания для щита Фаланги)
-        world.iterate(HostileMarker::class, Position::class, Health::class, Rotation::class) {
-                entity, pos, health, rot ->
-            val shot = grid.queryNearbyPlayerBullet(pos.x, pos.y) ?: return@iterate
-            if (isShieldBlocking(entity, shot, pos, rot)) return@iterate // пуля звякнула о фронтальный щит
-            health.current -= PLAYER_SHOT_DAMAGE
-            shot.consume()                       // пуля гаснет: возврат в пул
-            showEnemyHealthBarFor(entity, seconds = 1f) // diegetic HP: полоска на секунду над головой
-            if (health.current <= 0) {
-                state.addKill()                  // комбо «Нейросеть» копит Синхронизацию
-                entity.destroy()
+        // ── Игрок: i-frames Фазового Сдвига → phase-pierce → Адреналин ──────
+        if (victim contains PlayerTag::class) {
+            val phase = victim[PhaseShift::class]
+            if (phase != null && phase.invulnRemaining > 0f) {
+                phase.piercedBullet = true
+                bullets.onPhasePiercedBullet()             // рывок сквозь пулю = bullet-time!
+                return
             }
         }
 
-        // 3. Вражеские пули → игрок: i-frames → phase-pierce → Adrenaline
-        world.iterate(PlayerTag::class, PhaseShift::class, Position::class, Health::class) {
-                _, phase, pos, health ->
-            for (eb in bullets.enemyBulletsNear(pos.x, pos.y)) {
-                if (!overlaps(eb, pos)) continue
-                when {
-                    phase.invulnRemaining > 0f -> {
-                        phase.piercedBullet = true
-                        bullets.onPhasePiercedBullet()   // рывок сквозь пулю = bullet-time!
-                    }
-                    else -> {
-                        health.current -= ENEMY_BULLET_DAMAGE
-                        state.onPlayerDamaged()          // обнуление комбо-шкалы
-                        eb.alive = false                 // пуля расходится дымом (FX-пул)
-                    }
-                }
-            }
+        health.current -= b.damage
+        victim[LastDamagedBy::class]?.let { it.faction = b.faction }
+        showEnemyHealthBarFor(victim, seconds = 1f)        // diegetic HP: полоска на секунду
+
+        if (health.current <= 0) onDeath(victim, b.faction, vPos)
+    }
+
+    private fun onDeath(victim: Entity, killerFaction: Faction, pos: Position) {
+        when (killerFaction) {
+            Faction.PLAYER -> state.addKill()              // комбо «Нейросеть» копится
+            else -> state.recordBotCrossfireKill()         // статистика хаоса на арене
         }
+        if (victim contains PlayerTag::class) {
+            state.onPlayerKilled()
+            return                                          // игрок не удаляется — экран сам решит
+        }
+        spawnDeathFx(pos)                                   // вспышка из FX-пула частиц
+        victim.destroy()                                    // Fleks снимет все компоненты разом
     }
 
-    /** Фаланга: урон с фронта (в пределах SHIELD_ARC_DEG от направления взгляда) блокируется */
-    private fun isShieldBlocking(entity: Entity, shot: BulletRef, target: Position, rot: Rotation): Boolean {
-        if (!(entity contains ShieldBearerTag::class)) return false
-        val angleToShot = Math.toDegrees(
-            Math.atan2((shot.y - target.y).toDouble(), (shot.x - target.x).toDouble())
-        ).toFloat()
-        // Разница углов в [-180..180]: |diff| < 70° => выстрел пришёл в лицо щита
-        val diff = kotlin.math.abs(((angleToShot - rot.degrees + 540) % 360) - 180)
-        return diff > 180 - SHIELD_ARC_DEG / 2f
-    }
-
-    private fun overlaps(eb: EnemyBullet, pos: Position): Boolean {
-        val dx = eb.origin.x - pos.x; val dy = eb.origin.y - pos.y
-        return dx * dx + dy * dy < BULLET_HIT_R2
-    }
+    private fun spawnDeathFx(pos: Position) { /* пул ParticleFx: неоновый взрыв в точке pos */ }
 
     private fun showEnemyHealthBarFor(entity: Entity, seconds: Float) {
         /* Метка "hp bar visible until t+seconds" — гаснет сама (diegetic UI) */
     }
 
     companion object {
-        const val PLAYER_SHOT_DAMAGE = 12
-        const val ENEMY_BULLET_DAMAGE = 15
         const val SHIELD_ARC_DEG = 140f   // фронтальная дуга защиты щитоносца
-        const val BULLET_HIT_R2 = 12f * 12f
+        const val BULLET_HIT_R = 12f
     }
-}
-
-/** Маркер враждебной фракции (добавляется спавнером к каждому врагу) */
-class HostileMarker
-
-/** Ссылка на пулю игрока из spatial-запроса; consume() возвращает её в пул */
-class BulletRef(val x: Float = 0f, val y: Float = 0f) {
-    fun consume() {}
-}
-
-/** Компактная пространственная сетка: плоские массивы, ноль аллокаций на кадр */
-class SpatialGrid(val cellSize: Float) {
-    fun clear() {}
-    fun insert(entityId: Int, x: Float, y: Float, radius: Float) {}
-    fun queryNearbyPlayerBullet(x: Float, y: Float): BulletRef? = null
 }

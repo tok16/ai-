@@ -43,6 +43,27 @@ class GameState {
         _syncMeter.value = (_syncMeter.value + SYNC_PER_KILL).coerceAtMost(1f)
     }
 
+    /**
+     * Убийство, совершённое НЕ игроком (crossfire: боты косят друг друга).
+     * Комбо «Нейросеть» за чужие смерти НЕ капается — но растёт счётчик хаоса
+     * на арене (метаритм: чем больше ботов перебили друг друга, тем ближе
+     * «зачистка периметра» — SpawnDirector может использовать его для эскалации).
+     */
+    private val _crossfireKills = MutableStateFlow(0)
+    val crossfireKills: StateFlow<Int> = _crossfireKills.asStateFlow()
+
+    fun recordBotCrossfireKill() { _crossfireKills.value += 1 }
+
+    /** Смерть игрока: ран окончен, комбо сгорает вместе с андроидом */
+    fun onPlayerKilled() {
+        _syncMeter.value = 0f
+        _killsWithoutDamage.value = 0
+        _playerAlive.value = false
+    }
+
+    private val _playerAlive = MutableStateFlow(true)
+    val playerAlive: StateFlow<Boolean> = _playerAlive.asStateFlow()
+
     fun onPlayerDamaged() {
         _killsWithoutDamage.value = 0
         _syncMeter.value = 0f // комбо «нейросеть» обнуляется при получении урона

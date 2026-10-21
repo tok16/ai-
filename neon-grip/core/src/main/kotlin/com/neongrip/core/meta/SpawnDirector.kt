@@ -1,10 +1,10 @@
 package com.neongrip.core.meta
 
+import com.neongrip.core.components.Faction
 import com.neongrip.core.ecs.GameWorld
 import com.neongrip.core.ecs.EntityFactory
 import com.neongrip.core.state.GameState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -13,10 +13,17 @@ import kotlin.coroutines.coroutineContext
  * использовать палец-триггер (рывок), а не просто бегать кругами:
  *
  *  • Дроны-камикадзе: прямая гиператака — уклон только рывком в последнюю долю секунды.
- *  • Турели-предикторы: стрельба в точку, где игрок будет через 1с (красный лазер);
+ *  • Турели-предикторы: стрельба в точку, где цель будет через 1с (красный лазер);
  *    паттерн движения ломается только рывком.
  *  • Щитоносцы (Фаланга): уязвимы со спины — рывок за спину + огонь правым стиком.
  *  • Снайперы: луч со «слепой зоной» — пересечь луч можно только рывком.
+ *
+ * Crossfire-эскалация («боты убивают друг друга и игрока»): каждая волна — это
+ * ДВА отряда охраны, Alpha (Faction.HOSTILE) и Bravo (Faction.HOSTILE_B), которые
+ * враждебны и игроку, и ДРУГ ДРУГУ. Отряды входят с противоположных краёв арены;
+ * как только игрок «растворяется» в Фазовом Сдвиге (i-frames), оба отряда теряют
+ * приоритетную цель и открывают упреждающий огонь по конкурентам. За каждой
+ * чужой смертью на арене наблюдает GameState.crossfireKills.
  */
 class SpawnDirector(
     private val state: GameState,
@@ -30,33 +37,39 @@ class SpawnDirector(
             wave++
             delay(WAVE_PAUSE_MS)          // дыхание между волнами — ритм боя важнее спама
             telegraphSafeAreaFlash()      // diegetic предупреждение: рамка safe area мигает
-            spawnWave(wave)
+            spawnSquad(wave, faction = Faction.HOSTILE, fromLeft = true)     // отряд Alpha
+            spawnSquad(wave, faction = Faction.HOSTILE_B, fromLeft = false)  // отряд Bravo — с другого края
         }
     }
 
-    private suspend fun spawnWave(wave: Int) {
-        val budget = 4 + wave
+    /**
+     * Каскадный спавн одного отряда у своего края арены (толпа не появляется
+     * одним кадром — читаемость bullet-hell). Противоположные края двух отрядов
+     * гарантируют линию фронта ПОСЕРЕДИНЕ — ровно там, где бегает игрок.
+     */
+    private suspend fun spawnSquad(wave: Int, faction: Faction, fromLeft: Boolean) {
+        val budget = SQUAD_BASE + wave
         repeat(budget) { i ->
-            // Каскад спавна: толпа не появляется одним кадром (читаемость bullet-hell)
-            val edge = pickEdgeSpawnPoint(i)
+            val (x, y) = edgeSpawnPoint(i, fromLeft)
             when (i % 4) {
-                0 -> entities.spawnKamikazeDrone(edge.first, edge.second)
-                1 -> entities.spawnPredictorTurret(edge.first, edge.second)
-                2 -> entities.spawnShieldBearer(edge.first, edge.second)
-                else -> entities.spawnSniper(edge.first, edge.second)
+                0 -> entities.spawnKamikazeDrone(x, y, faction)
+                1 -> entities.spawnPredictorTurret(x, y, faction)
+                2 -> entities.spawnShieldBearer(x, y, faction)
+                else -> entities.spawnSniper(x, y, faction)
             }
             delay(SPAWN_STAGGER_MS)
         }
     }
 
-    /** Точки появления у краёв, но ВНУТРИ safe area — см. EntityFactory.clampToSafeArea */
-    private fun pickEdgeSpawnPoint(index: Int): Pair<Float, Float> {
+    /** Точки появления у края отряда, но ВНУТРЬ safe area — см. EntityFactory.clampToSafeArea */
+    private fun edgeSpawnPoint(index: Int, fromLeft: Boolean): Pair<Float, Float> {
         val w = EntityFactory.screenW; val h = EntityFactory.screenH
+        val x = if (fromLeft) w * 0.1f else w * 0.9f
         return when (index % 4) {
-            0 -> w * 0.9f to h * 0.5f   // справа
-            1 -> w * 0.5f to h * 0.9f   // сверху
-            2 -> w * 0.1f to h * 0.5f   // слева
-            else -> w * 0.5f to h * 0.1f // снизу
+            0 -> x to h * 0.5f
+            1 -> x to h * 0.8f
+            2 -> x to h * 0.25f
+            else -> x to h * 0.65f
         }
     }
 
@@ -68,5 +81,6 @@ class SpawnDirector(
     companion object {
         const val WAVE_PAUSE_MS = 3500L
         const val SPAWN_STAGGER_MS = 450L
+        const val SQUAD_BASE = 3   // бюджет ОДНОГО отряда; волна = Alpha + Bravo
     }
 }
