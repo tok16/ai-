@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "neon-grip"
-include(":core", ":android")
+include(":core", ":android", ":desktop")

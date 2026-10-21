@@ -1,6 +1,7 @@
 // Общие настройки для всех модулей: версии библиотек в одном месте (Version Catalog альтернатива)
 plugins {
     kotlin("jvm") version "1.9.23" apply false
+    kotlin("android") version "1.9.23" apply false
     id("com.android.application") version "8.3.1" apply false
 }
 

@@ -1,6 +1,6 @@
 package com.neongrip.core.ecs
 
-import com.github.quillnov.fleks.Entity
+import com.neongrip.core.ecs.Entity
 import com.neongrip.core.NeonGripGame
 import com.neongrip.core.components.*
 

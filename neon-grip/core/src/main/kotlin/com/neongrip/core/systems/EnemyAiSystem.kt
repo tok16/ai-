@@ -1,6 +1,6 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.ai.EnemyBrains
 import com.neongrip.core.ai.EnemyWorldApi
 import com.neongrip.core.components.*

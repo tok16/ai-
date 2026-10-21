@@ -1,7 +1,7 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.Entity
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.Entity
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 
 /**
@@ -35,7 +35,8 @@ class TargetingSystem : IntervalSystem() {
     override fun update() {
         rebuildSnapshot()
 
-        world.iterate(BotTag::class, BotTargeting::class, Position::class, FactionComponent::class) {
+        world.iterate(BotTag::class, BotTargeting::class, Position::class, FactionComponent::class) { _e ->
+ {
                 _, targeting, selfPos, selfFc ->
             targeting.retargetCooldown -= delta
             if (targeting.retargetCooldown > 0f && targeting.hasTarget) return@iterate
@@ -56,7 +57,8 @@ class TargetingSystem : IntervalSystem() {
     private fun rebuildSnapshot() {
         count = 0
         snapshotIds.clear()
-        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) { e, p, _, hp, fc ->
+        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) { _e ->
+ { e, p, _, hp, fc ->
             if (hp.current <= 0 || count >= snapshotX.size) return@iterate
             snapshotIds.add(e.id())
             snapshotX[count] = p.x; snapshotY[count] = p.y; snapshotFaction[count] = fc.faction
@@ -91,7 +93,8 @@ class TargetingSystem : IntervalSystem() {
     /** Игрок в i-frames рывка — для AI он «растворяется»: уклонение вознаграждается огнём по ботам */
     private fun playerInPhaseShift(): Boolean {
         var shifting = false
-        world.iterate(PlayerTag::class, PhaseShift::class) { _, phase ->
+        world.iterate(PlayerTag::class, PhaseShift::class) { _e ->
+ { _, phase ->
             if (phase.invulnRemaining > 0f) shifting = true
         }
         return shifting

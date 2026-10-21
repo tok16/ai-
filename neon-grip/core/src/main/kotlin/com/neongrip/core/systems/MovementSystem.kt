@@ -1,6 +1,6 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.Position
 import com.neongrip.core.components.Velocity
 

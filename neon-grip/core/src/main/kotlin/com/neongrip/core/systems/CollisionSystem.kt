@@ -1,7 +1,7 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.Entity
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.Entity
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 import com.neongrip.core.state.GameState
 
@@ -50,7 +50,8 @@ class CollisionSystem(
     private fun rebuildSnapshot() {
         count = 0
         ids.clear()
-        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) {
+        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) { _e ->
+ {
                 entity, pos, hb, _, _ ->
             if (count >= xs.size) return@iterate       // жёсткий потолок снимка (перф-гарантия)
             ids.add(entity.id())

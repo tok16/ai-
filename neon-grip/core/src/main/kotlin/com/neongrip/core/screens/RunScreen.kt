@@ -3,7 +3,12 @@ package com.neongrip.core.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.ScreenAdapter
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
+import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.neongrip.core.NeonGripGame
 import com.neongrip.core.ecs.EntityFactory
 import com.neongrip.core.input.ThreeFingerGripController
@@ -25,10 +30,21 @@ class RunScreen(private val game: NeonGripGame) : ScreenAdapter() {
     private val spawner = SpawnDirector(game.state, world, entities)
     private var waveJob: Job? = null
 
+    // Минимальный HUD-оверлей (кредиты/заметки ввода) поверх diegetic-рендера
+    private val hud = Stage(ScreenViewport())
+    private var returnScheduled = false
+
     override fun show() {
         // Мультитач: каждый палец = отдельный pointerId; никаких «жестовых» обработчиков сверху
-        Gdx.input.inputProcessor = InputMultiplexer(world.grip)
+        Gdx.input.inputProcessor = InputMultiplexer(hud, world.grip)
         Gdx.input.isContinuousInputEnabled = true   // критично для 3+ одновременных касаний
+
+        val skin = Skin(Gdx.files.internal("uiskin.json"))
+        Label("WASD/джойстики • ПРОБЕЛ=рывок", skin.get(Label::class.java)).apply {
+            color = Color(0.3f, 0.8f, 1f, 0.6f)
+            setPosition(12f, Gdx.graphics.height - 34f)
+            hud.addActor(this)
+        }
 
         entities.spawnPlayer()
         // Спавн волн врагов — корутина: delay → telegraph → spawn → repeat
@@ -41,6 +57,12 @@ class RunScreen(private val game: NeonGripGame) : ScreenAdapter() {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
         // Камера/мир ограничены Safe Area: чёлка не перекрывает игровое поле
         world.update(delta.coerceAtMost(MAX_FRAME_DT))
+        world.renderFrame()   // diegetic-рендер: контур HP, искры, пульс триггера
+        hud.act(delta); hud.draw()
+        if (!game.state.playerAlive.value && !returnScheduled) {
+            returnScheduled = true
+            Gdx.app.postRunnable { game.setScreen(BunkerScreen(game)) } // ран окончен → бункер
+        }
     }
 
     override fun resize(width: Int, height: Int) {
@@ -48,11 +70,14 @@ class RunScreen(private val game: NeonGripGame) : ScreenAdapter() {
         ThreeFingerGripController.screenHeightPx = height
         EntityFactory.screenW = width.toFloat()
         EntityFactory.screenH = height.toFloat()
+        hud.viewport.update(width, height, true)
     }
 
     override fun hide() {
         waveJob?.cancel() // уход с экрана глушит все AI-корутины и таймеры спавна
     }
+
+    override fun dispose() { hud.dispose() }
 
     companion object {
         /** Клип dt: при сворачивании на телефон приходит delta=5с — физика улетела бы */
