@@ -1,0 +1,62 @@
+name: Build Android APK
+
+# Собирает APK на облачных серверах GitHub и выкладывает его в Release.
+# Запуск: push тега вида v* (например v1.0) — или вручную через вкладку Actions.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # нужно для создания Release и загрузки файлов
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout кода
+        uses: actions/checkout@v4
+
+      - name: Установить JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Настроить Gradle (кэш зависимостей)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Собрать релизный APK
+        run: ./gradlew :android:assembleRelease --no-daemon
+
+      - name: Подписать APK debug-ключом (для установки без Play Market)
+        run: |
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+            --ks ~/.android/debug.keystore \
+            --ks-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --key-pass pass:android \
+            --out app-signed.apk \
+            android/build/outputs/apk/release/android-release-unsigned.apk || \
+          cp android/build/outputs/apk/release/*.apk app-signed.apk
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Создать Release и прикрепить APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Neon Grip ${{ github.ref_name }}"
+          body: |
+            Боевой андроид прорывается через серверные фермы. Протокол «Хват» активен. 🎮
+
+            ## Как установить
+            1. Скачайте `app-signed.apk`
+            2. На телефоне разрешите установку из неизвестных источников
+            3. Откройте файл — игра требует горизонтальную ориентацию, Android 8+
+          files: app-signed.apk
+          draft: false
+          prerelease: false
