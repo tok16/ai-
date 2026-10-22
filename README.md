@@ -19,7 +19,7 @@ Top-Down Twin-Stick Shooter (Bullet-Hell / Roguelite) в неоновом киб
 
 ## 🤖 Автоматическая сборка APK
 
-В репозиторий добавлен workflow `.github/workflows/android-release.yml`: при пуше тега `v*` GitHub Actions собирает подписанный APK и прикрепляет его к Release. Чтобы включить его, переместите файл `.github-workflow-android-release.yml` из корня в `.github/workflows/` (GitHub требует, чтобы workflow лежал в корне репозитория, а проект — в отдельной папке).
+Файл `.github-workflow-android-release.yml` лежит в корне репозитория. GitHub запускает автосборку APK только если workflow находится по пути `.github/workflows/`. Включите его одним действием: на странице репозитория **Add file → Create new file → имя: `.github/workflows/android-release.yml` → содержимое скопируйте из файла в корне → Commit**. После этого при пуше тега `v*` Actions соберёт подписанный APK и сам прикрепит его к Release.
 
 Также запуск можно сделать вручную: вкладка **Actions → Build Android APK → Run workflow**.
 
