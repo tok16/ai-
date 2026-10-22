@@ -1,6 +1,6 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.Bullet
 import com.neongrip.core.components.EntityRef
 import com.neongrip.core.components.Faction
@@ -23,7 +23,7 @@ class BulletSystem(private val state: GameState) : IntervalSystem() {
 
     override var interval = 1
 
-    private val bullets = Pool(
+    @PublishedApi internal val bullets = Pool(
         capacity = BULLET_POOL_SIZE,
         factory = ::Bullet,
         reset = { b -> b.alive = false; b.homingTarget = null; b.lifetime = 2f },

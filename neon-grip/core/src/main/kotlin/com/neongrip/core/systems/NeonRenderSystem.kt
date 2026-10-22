@@ -2,7 +2,7 @@ package com.neongrip.core.systems
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 import com.neongrip.core.input.ThreeFingerGripController
 import com.neongrip.core.state.GameState
@@ -27,8 +27,10 @@ class NeonRenderSystem(
     private val shapes = ShapeRenderer()
     private val tmpColor = Color()
 
-    override fun update() {
-        world.iterate(PlayerTag::class, Health::class, SpriteNeon::class, DashCooldown::class) {
+    /** Кадр: вызывается из RunScreen.render() (GL-контекст), а не из ECS-пайплайна */
+    fun render() {
+        world.iterate(PlayerTag::class, Health::class, SpriteNeon::class, DashCooldown::class) { _e ->
+ {
                 _, health, neon, cooldown ->
             val hpRatio = health.current.toFloat() / health.max
             neon.outlineColorHex = blendNeon(hpRatio)   // синий → красный (diegetic HP)

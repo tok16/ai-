@@ -1,6 +1,6 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 import kotlin.math.hypot
 
@@ -31,8 +31,8 @@ class BotLocomotionSystem : IntervalSystem() {
     override fun update() {
         rebuildSniperIndex()
 
-        world.iterate(BotTag::class, BotTargeting::class, BotMovement::class,
-                      Position::class, Velocity::class) { _, targeting, move, pos, vel ->
+        world.iterate(BotTag::class, BotTargeting::class, BotMovement::class, Position::class, Velocity::class) { _e ->
+ { _, targeting, move, pos, vel ->
             if (move.speed <= 0f) return@iterate          // турели не двигаются
             if (!targeting.hasTarget) { vel.vx = 0f; vel.vy = 0f; return@iterate }
 
@@ -62,7 +62,8 @@ class BotLocomotionSystem : IntervalSystem() {
 
     private fun rebuildSniperIndex() {
         sniperPositions.clear()
-        world.iterate(SniperTag::class, Position::class) { _, p -> sniperPositions.add(p) }
+        world.iterate(SniperTag::class, Position::class) { _e ->
+ { _, p -> sniperPositions.add(p) }
     }
 
     private fun isSniper(pos: Position): Boolean = sniperPositions.contains(pos)

@@ -1,7 +1,7 @@
 package com.neongrip.core.systems
 
-import com.github.quillnov.fleks.Entity
-import com.github.quillnov.fleks.IntervalSystem
+import com.neongrip.core.ecs.Entity
+import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -31,8 +31,8 @@ class BotCombatSystem(
     override var interval = 1
 
     override fun update() {
-        world.iterate(BotTag::class, BotTargeting::class, Position::class,
-                      Rotation::class, FactionComponent::class, Health::class) {
+        world.iterate(BotTag::class, BotTargeting::class, Position::class, Rotation::class, FactionComponent::class, Health::class) { _e ->
+ {
                 entity, targeting, pos, rot, fc, _ ->
             if (!targeting.hasTarget) return@iterate
 
@@ -109,7 +109,8 @@ class BotCombatSystem(
 
     /** Взрыв камикадзе: урон по площади ВСЕМ враждебным фракциям — и игроку, и ботам */
     private fun explode(at: Position, faction: Faction) {
-        world.iterate(Position::class, Health::class, FactionComponent::class) { _, p, hp, ofc ->
+        world.iterate(Position::class, Health::class, FactionComponent::class) { _e ->
+ { _, p, hp, ofc ->
             if (!faction.isHostileTo(ofc.faction)) return@iterate
             val dx = p.x - at.x; val dy = p.y - at.y
             if (dx * dx + dy * dy < KAMIKAZE_BLAST_R2) hp.current -= KAMIKAZE_DAMAGE

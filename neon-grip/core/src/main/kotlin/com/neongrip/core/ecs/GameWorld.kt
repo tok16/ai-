@@ -1,6 +1,6 @@
 package com.neongrip.core.ecs
 
-import com.github.quillnov.fleks.world
+import com.neongrip.core.ecs.world
 import com.neongrip.core.components.*
 import com.neongrip.core.input.ThreeFingerGripController
 import com.neongrip.core.state.GameState
@@ -17,6 +17,9 @@ import com.neongrip.core.systems.*
 class GameWorld(val state: GameState) {
 
     val grip = ThreeFingerGripController()
+
+    /** Diegetic-рендер живёт вне ECS-пайплайна: кадры рисуются из RunScreen.render() */
+    val neonRender = NeonRenderSystem(state, grip)
 
     /** Глобальный таймскейл: в режиме «Адреналин» время врагов замедляется до 0.35x */
     var timeScale: Float = 1f
@@ -69,10 +72,12 @@ class GameWorld(val state: GameState) {
                 bullets,
                 CollisionSystem(state, bullets), // faction-aware: crossfire косят и ботов
                 FxParticlePoolSystem(),
-                NeonRenderSystem(state, grip),
             )
         }
     }
+
+    /** Кадр diegetic-рендера: вызывается из RunScreen.render (GL-контекст, вне логики) */
+    fun renderFrame() = neonRender.render()
 
     fun update(dt: Float) {
         // Bullet-time: игрок «скользит» между почти стоящими пулями.

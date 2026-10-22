@@ -5,6 +5,7 @@ import com.neongrip.core.ecs.GameWorld
 import com.neongrip.core.screens.BunkerScreen
 import com.neongrip.core.screens.RunScreen
 import com.neongrip.core.state.GameState
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**

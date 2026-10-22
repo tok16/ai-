@@ -9,12 +9,12 @@ package com.neongrip.core.pool
  * «переиспользуются» путём сброса полей.
  */
 class Pool<T>(
-    private val capacity: Int,
+    @PublishedApi internal val capacity: Int,
     private val factory: () -> T,
     private val reset: (T) -> Unit,
-    private val isAlive: (T) -> Boolean,
+    @PublishedApi internal val isAlive: (T) -> Boolean,
 ) {
-    private val slots = ArrayList<T>(capacity).also { list ->
+    @PublishedApi internal val slots = ArrayList<T>(capacity).also { list ->
         repeat(capacity) { list.add(factory()) } // предзаполнение до боя — zero-allocation в ране
     }
     private var cursor = 0

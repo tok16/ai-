@@ -97,6 +97,7 @@ class PhaseShift(
 class DashCooldown(var remaining: Float = 0f, var ready: Boolean = true)
 
 // ── Враги (дизайн заставляет использовать третий палец) ─────────────────────
+class HostileMarker        // маркер «враждебной боевой единицы» корпорации
 class KamikazeDroneTag    // летит по прямой с огромной скоростью — уклонение только рывком
 class PredictorTurretTag  // стреляет в упреждение, показывает красный лазер-предсказание
 class ShieldBearerTag     // фаланга: уязвим только со спины — нужен рывок за спину

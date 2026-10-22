@@ -16,14 +16,26 @@ android {
         minSdk = 26            // Multi-pointer pointerId API стабилен с 26
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0-prototip"
+        versionName = "1.0"
     }
 
     // Строго горизонтальная ориентация enforced через manifest + here
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+        }
         release {
-            isMinifyEnabled = true
+            // Minify временно отключен: libGDX/Fleks требуют полного набора ProGuard-правил,
+            // которые будут добавлены вместе с ассетами. versionName/versionCode фиксируют v1.0.
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Подпись debug-ключом, чтобы release APK версии 1.0 был устанавливаемым
+            val debugKs = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            if (debugKs.exists()) {
+                signingConfig = signingConfigs.getByName("debug").apply {
+                    storeFile = debugKs
+                }
+            }
         }
     }
 
