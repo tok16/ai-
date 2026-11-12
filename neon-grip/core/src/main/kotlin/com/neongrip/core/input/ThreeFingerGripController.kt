@@ -32,13 +32,14 @@ class ThreeFingerGripController : com.badlogic.gdx.InputProcessor {
     private val leftOrigin = Vector2()
     private val rightOrigin = Vector2()
     private val deadZone = STICK_DEAD_ZONE_PX
+    
     private val maxRadius = STICK_MAX_RADIUS_PX
 
     private var lastRightTapUptime = 0L
 
     override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
         val x = screenX.toFloat(); val y = screenY.toFloat()
-        val w = screenWidthPx; val h = screenHeightPx
+        val w = screenWidthPx.toFloat(); val h = screenHeightPx.toFloat()
 
         when {
             // Триггер-зона: верхняя часть правой стороны, но сдвинутая на ~12% внутрь экрана —
@@ -68,14 +69,15 @@ class ThreeFingerGripController : com.badlogic.gdx.InputProcessor {
         return true // потребляем событие: LibGDX не отдаст его системным обработчикам
     }
 
-    override fun touchDragged(screenX: Int, screenY: Int, pointer: Int) {
+    override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
         when (pointer) {
             leftThumbId -> snapTo8(computeStick(leftOrigin, screenX, screenY), into = moveVector)
             rightThumbId -> aimVector.set(computeStick(rightOrigin, screenX, screenY))
         }
+        return true
     }
 
-    override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int) {
+    override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
         // ВАЖНО: освобождаем ТОЛЬКО соответствующий слот по pointerId.
         // Отпускание левого большого пальца не должно сбрасывать прицел правой руки.
         when (pointer) {
@@ -83,6 +85,13 @@ class ThreeFingerGripController : com.badlogic.gdx.InputProcessor {
             rightThumbId -> { rightThumbId = INVALID_POINTER; aimVector.set(0f, 0f) }
             rightIndexId -> { rightIndexId = INVALID_POINTER }
         }
+        return true
+    }
+
+    override fun touchCancelled(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+        // Системный жест (свайп от края) перехватил палец — освобождаем слот как при touchUp
+        touchUp(screenX, screenY, pointer, button)
+        return true
     }
 
     // Остальные методы InputProcessor — дефолтные (false): нам нужны только касания
@@ -114,7 +123,7 @@ class ThreeFingerGripController : com.badlogic.gdx.InputProcessor {
 
     /** Снап к 8 направлениям — эмуляция D-pad: палец дрожит, направление стабильно */
     private fun snapTo8(v: Vector2, into: Vector2) {
-        if (v.len2 < 0.0001f) { into.set(0f, 0f); return }
+        if (v.len2() < 0.0001f) { into.set(0f, 0f); return }
         val angleDeg = (atan2(v.y.toDouble(), v.x.toDouble()) * RAD2DEG).toFloat()
         val octant = (((angleDeg / 45f) + 0.5f).toInt() % 8 + 8) % 8
         into.set(OCTANTS[octant]).scl(if (v.len() > 0.9f) 1f else 0.7f)

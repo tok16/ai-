@@ -35,7 +35,7 @@ class TargetingSystem : IntervalSystem() {
     override fun update() {
         rebuildSnapshot()
 
-        world.iterate(BotTag::class, BotTargeting::class, Position::class, FactionComponent::class) { _, targeting, selfPos, selfFc ->
+        world.iterate(BotTag::class, BotTargeting::class, Position::class, FactionComponent::class) { _, targeting, selfPos, selfFc, _4 ->
             targeting.retargetCooldown -= delta
             if (targeting.retargetCooldown > 0f && targeting.hasTarget) return@iterate
 
@@ -90,7 +90,7 @@ class TargetingSystem : IntervalSystem() {
     /** Игрок в i-frames рывка — для AI он «растворяется»: уклонение вознаграждается огнём по ботам */
     private fun playerInPhaseShift(): Boolean {
         var shifting = false
-        world.iterate(PlayerTag::class, PhaseShift::class) { _, phase ->
+        world.iterate(PlayerTag::class, PhaseShift::class) { _, phase, _2 ->
             if (phase.invulnRemaining > 0f) shifting = true
         }
         return shifting

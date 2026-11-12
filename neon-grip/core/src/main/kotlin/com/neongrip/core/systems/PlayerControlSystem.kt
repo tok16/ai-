@@ -40,7 +40,7 @@ class PlayerControlSystem(
     }
 
     override fun update() {
-        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown ->
+        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown, _6 ->
 
             // ── Палец 1: движение (снап к 8 направлениям сделан в контроллере) ──
             if (grip.moveVector.len2 > 0.01f) {
