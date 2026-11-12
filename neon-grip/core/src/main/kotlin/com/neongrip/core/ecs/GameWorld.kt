@@ -1,6 +1,5 @@
 package com.neongrip.core.ecs
 
-import com.neongrip.core.ecs.world
 import com.neongrip.core.components.*
 import com.neongrip.core.input.ThreeFingerGripController
 import com.neongrip.core.state.GameState
@@ -24,7 +23,11 @@ class GameWorld(val state: GameState) {
     /** Глобальный таймскейл: в режиме «Адреналин» время врагов замедляется до 0.35x */
     var timeScale: Float = 1f
 
-    val world = world {
+    val world: EWorld
+
+    init {
+        val builder = WorldBuilder()
+        with(builder) {
         // ── Компоненты (data-driven, без наследования) ──────────────────────
         component { Position() }
         component { Velocity() }
@@ -74,6 +77,8 @@ class GameWorld(val state: GameState) {
                 FxParticlePoolSystem(),
             )
         }
+        }
+        world = EWorld.make(builder)
     }
 
     /** Кадр diegetic-рендера: вызывается из RunScreen.render (GL-контекст, вне логики) */

@@ -29,9 +29,7 @@ class NeonRenderSystem(
 
     /** Кадр: вызывается из RunScreen.render() (GL-контекст), а не из ECS-пайплайна */
     fun render() {
-        world.iterate(PlayerTag::class, Health::class, SpriteNeon::class, DashCooldown::class) { _e ->
- {
-                _, health, neon, cooldown ->
+        world.iterate(PlayerTag::class, Health::class, SpriteNeon::class, DashCooldown::class) { _, health, neon, cooldown ->
             val hpRatio = health.current.toFloat() / health.max
             neon.outlineColorHex = blendNeon(hpRatio)   // синий → красный (diegetic HP)
             neon.outlineAlpha = 0.35f + 0.65f * hpRatio // тусклый контур = мало брони

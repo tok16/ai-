@@ -50,9 +50,7 @@ class CollisionSystem(
     private fun rebuildSnapshot() {
         count = 0
         ids.clear()
-        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) { _e ->
- {
-                entity, pos, hb, _, _ ->
+        world.iterate(Position::class, Hitbox::class, Health::class, FactionComponent::class) { entity, pos, hb, _, _ ->
             if (count >= xs.size) return@iterate       // жёсткий потолок снимка (перф-гарантия)
             ids.add(entity.id())
             xs[count] = pos.x; ys[count] = pos.y; rs[count] = hb.radius

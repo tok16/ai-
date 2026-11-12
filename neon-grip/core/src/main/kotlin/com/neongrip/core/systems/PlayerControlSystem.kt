@@ -40,8 +40,7 @@ class PlayerControlSystem(
     }
 
     override fun update() {
-        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _e ->
- { _, pos, vel, rot, phase, cooldown ->
+        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown ->
 
             // ── Палец 1: движение (снап к 8 направлениям сделан в контроллере) ──
             if (grip.moveVector.len2 > 0.01f) {
@@ -109,8 +108,7 @@ class PlayerControlSystem(
         // кроме PLAYER) — в crossfire-боу это подсказка игроку, кого боты косят друг друга
         var best = -1
         var bestD2 = Float.MAX_VALUE
-        world.iterate(Position::class, Health::class, FactionComponent::class) { _e ->
- { e, p, hp, fc ->
+        world.iterate(Position::class, Health::class, FactionComponent::class) { e, p, hp, fc ->
             if (fc.faction == Faction.PLAYER || hp.current <= 0) return@iterate
             val dx = p.x - pos.x; val dy = p.y - pos.y
             val d2 = dx * dx + dy * dy
