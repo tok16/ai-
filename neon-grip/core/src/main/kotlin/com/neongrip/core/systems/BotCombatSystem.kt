@@ -31,7 +31,7 @@ class BotCombatSystem(
     override var interval = 1
 
     override fun update() {
-        world.iterate(BotTag::class, BotTargeting::class, Position::class, Rotation::class, FactionComponent::class, Health::class) { entity, targeting, pos, rot, fc, _, _6 ->
+        world.iterate(BotTag::class, BotTargeting::class, Position::class, Rotation::class, FactionComponent::class, Health::class) { entity, targeting, pos, rot, fc, hp, _6 ->
             if (!targeting.hasTarget) return@iterate
 
             // ── 1. Валидация цели: мертва/удалена → сброс, ротация сама найдёт новую ──

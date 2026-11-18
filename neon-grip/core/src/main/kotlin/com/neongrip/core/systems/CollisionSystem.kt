@@ -1,5 +1,7 @@
 package com.neongrip.core.systems
 
+import kotlin.math.atan2
+
 import com.neongrip.core.ecs.Entity
 import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
@@ -83,7 +85,7 @@ class CollisionSystem(
         if (victim contains ShieldBearerTag::class) {
             val rot = victim[Rotation::class] ?: return
             val angleToShot = Math.toDegrees(
-                Math.atan2((b.origin.y - vPos.y).toDouble(), (b.origin.x - vPos.x).toDouble())
+                atan2((b.origin.y - vPos.y).toDouble(), (b.origin.x - vPos.x).toDouble())
             ).toFloat()
             val diff = kotlin.math.abs(((angleToShot - rot.degrees + 540) % 360) - 180)
             if (diff > 180 - SHIELD_ARC_DEG / 2f) return   // пуля звякнула о щит

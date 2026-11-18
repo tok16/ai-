@@ -31,7 +31,7 @@ class BotLocomotionSystem : IntervalSystem() {
     override fun update() {
         rebuildSniperIndex()
 
-        world.iterate(BotTag::class, BotTargeting::class, BotMovement::class, Position::class, Velocity::class) { _, targeting, move, pos, vel, _5 ->
+        world.iterate(BotTag::class, BotTargeting::class, BotMovement::class, Position::class, Velocity::class, PlayerTag::class) { _, targeting, move, pos, vel, _5, _6 ->
             if (move.speed <= 0f) return@iterate          // турели не двигаются
             if (!targeting.hasTarget) { vel.vx = 0f; vel.vy = 0f; return@iterate }
 

@@ -31,7 +31,7 @@ class EnemyAiSystem(
         override fun predictPlayerPosition(lookaheadSec: Float): Pair<Float, Float> {
             // Упреждение: pos + velocity * lookahead — игрок «сломает» паттерн только рывком
             var result = 0f to 0f
-            world.iterate(PlayerTag::class, Position::class, Velocity::class) { _, pos, vel, _3 ->
+            world.iterate(Position::class, Velocity::class, PlayerTag::class) { _, pos, vel, _3 ->
                 result = (pos.x + vel.vx * lookaheadSec) to (pos.y + vel.vy * lookaheadSec)
             }
             return result

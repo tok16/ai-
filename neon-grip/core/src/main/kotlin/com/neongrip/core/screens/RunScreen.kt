@@ -1,6 +1,7 @@
 package com.neongrip.core.screens
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
@@ -37,7 +38,7 @@ class RunScreen(private val game: NeonGripGame) : ScreenAdapter() {
     override fun show() {
         // Мультитач: каждый палец = отдельный pointerId; никаких «жестовых» обработчиков сверху
         Gdx.input.inputProcessor = InputMultiplexer(hud, world.grip)
-        Gdx.input.isContinuousInputEnabled = true   // критично для 3+ одновременных касаний
+        Gdx.input.setInputProcessorConfig(Input.Config(true, 20)); // continuous input критичен для 3+ одновременных касаний
 
         val skin = Skin(Gdx.files.internal("uiskin.json"))
         Label("WASD/джойстики • ПРОБЕЛ=рывок", skin.get(Label::class.java)).apply {
