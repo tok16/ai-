@@ -123,6 +123,34 @@ class EWorld constructor(builder: WorldBuilder) {
         crossinline action: (Entity, A, B, C, D, E2) -> Unit,
     ) = iterate5(a, b, c, d, e2) { ent, x, y, z, w, v -> action(ent, x, y, z, w, v) }
 
+    inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any> iterate(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
+        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
+        crossinline action: (Entity, A, B, C, D, E2, F) -> Unit,
+    ) = iterate6(a, b, c, d, e2, f) { ent, x, y, z, w, v, u -> action(ent, x, y, z, w, v, u) }
+
+    @PublishedApi
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any> iterate6(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
+        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
+        crossinline action: (Entity, A, B, C, D, E2, F) -> Unit,
+    ) {
+        val sa = storeRaw(a) ?: return
+        val sb = storeRaw(b) ?: return
+        val sc = storeRaw(c) ?: return
+        val sd = storeRaw(d) ?: return
+        val se = storeRaw(e2) ?: return
+        val sf = storeRaw(f) ?: return
+        for (id in sa.indices) {
+            if (!aliveAt(id)) continue
+            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
+            val vd = sd.getOrNull(id); val ve = se.getOrNull(id); val vf = sf.getOrNull(id)
+            if (va == null || vb == null || vc == null || vd == null || ve == null || vf == null) continue
+            @Suppress("UNCHECKED_CAST")
+            action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2, vf as F)
+        }
+    }
+
     @PublishedApi
     internal inline fun <reified A : Any, reified B : Any> iterate2(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, crossinline action: (Entity, A, B) -> Unit,

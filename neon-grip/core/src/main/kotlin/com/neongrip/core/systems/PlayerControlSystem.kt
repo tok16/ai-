@@ -1,6 +1,7 @@
 package com.neongrip.core.systems
 
 import com.badlogic.gdx.math.Vector2
+import kotlin.math.atan2
 import com.neongrip.core.ecs.IntervalSystem
 import com.neongrip.core.components.*
 import com.neongrip.core.input.ThreeFingerGripController
@@ -40,7 +41,7 @@ class PlayerControlSystem(
     }
 
     override fun update() {
-        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown, _6 ->
+        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown ->
 
             // ── Палец 1: движение (снап к 8 направлениям сделан в контроллере) ──
             if (grip.moveVector.len2 > 0.01f) {
@@ -50,7 +51,7 @@ class PlayerControlSystem(
 
             // ── Палец 2: прицел + автоматический огонь при отклонении стика ─────
             if (grip.aimVector.len2 > 0.01f && !state.reloading.value) {
-                rot.degrees = Math.atan2(grip.aimVector.y.toDouble(), grip.aimVector.x.toDouble())
+                rot.degrees = atan2(grip.aimVector.y.toDouble(), grip.aimVector.x.toDouble())
                     .toFloat() * 57.29578f
                 fireTick += delta
                 if (fireTick >= FIRE_INTERVAL) {
