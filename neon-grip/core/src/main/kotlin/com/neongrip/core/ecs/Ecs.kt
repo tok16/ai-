@@ -102,35 +102,122 @@ class EWorld constructor(builder: WorldBuilder) {
     @PublishedApi
     internal fun entityOf(id: Int): Entity = Entity(id, denseStores, aliveFlags)
 
-    // ── Type-safe итераторы 1..5 компонентов (Fleks-совместимый DSL) ──────────
+    // ── Type-safe итераторы 1..7 компонентов (Fleks-совместимый DSL) ──────────
     inline fun <reified A : Any, reified B : Any> iterate(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, crossinline action: (Entity, A, B) -> Unit,
-    ) = iterate2(a, b) { e, x, y -> action(e, x, y) }
+    ) { iterateN2(a, b) { e, x, y -> action(e, x, y) } }
 
     inline fun <reified A : Any, reified B : Any, reified C : Any> iterate(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
         crossinline action: (Entity, A, B, C) -> Unit,
-    ) = iterate3(a, b, c) { e, x, y, z -> action(e, x, y, z) }
+    ) { iterateN3(a, b, c) { e, x, y, z -> action(e, x, y, z) } }
 
     inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any> iterate(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>, d: kotlin.reflect.KClass<D>,
         crossinline action: (Entity, A, B, C, D) -> Unit,
-    ) = iterate4(a, b, c, d) { e, x, y, z, w -> action(e, x, y, z, w) }
+    ) { iterateN4(a, b, c, d) { e, x, y, z, w -> action(e, x, y, z, w) } }
 
     inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any> iterate(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
         d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>,
         crossinline action: (Entity, A, B, C, D, E2) -> Unit,
-    ) = iterate5(a, b, c, d, e2) { ent, x, y, z, w, v -> action(ent, x, y, z, w, v) }
+    ) { iterateN5(a, b, c, d, e2) { e, x, y, z, w, v -> action(e, x, y, z, w, v) } }
 
     inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any> iterate(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
         d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
         crossinline action: (Entity, A, B, C, D, E2, F) -> Unit,
-    ) = iterate6(a, b, c, d, e2, f) { ent, x, y, z, w, v, u -> action(ent, x, y, z, w, v, u) }
+    ) { iterateN6(a, b, c, d, e2, f) { e, x, y, z, w, v, u -> action(e, x, y, z, w, v, u) } }
+
+    inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any, reified G : Any> iterate(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
+        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
+        g: kotlin.reflect.KClass<G>,
+        crossinline action: (Entity, A, B, C, D, E2, F, G) -> Unit,
+    ) { iterateN7(a, b, c, d, e2, f, g) { e, x, y, z, w, v, u, t -> action(e, x, y, z, w, v, u, t) } }
+
+
+
+
+
+
+
+
+
+    // ── Внутренние проходы: ровно n классов, ровно n+1 аргументов лямбды.
+    //    Лишние классы (последующие параметры лямбды не используются вызывающим кодом)
+    //    подставляются как NOCOMP::class — их store всегда пуст, поэтому они никогда
+    //    не ограничивают выборку. Пропущенные компоненты получают null в буфере. ──
+    @PublishedApi
+    internal inline fun <reified A : Any, reified B : Any> iterateN2(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>,
+        crossinline action: (Entity, A, B) -> Unit,
+    ) {
+        val sa = storeRaw(a) ?: return
+        val sb = storeRaw(b) ?: return
+        for (id in sa.indices) {
+            if (!aliveAt(id)) continue
+            val va = sa[id]; val vb = sb.getOrNull(id)
+            if (va == null || vb == null) continue
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B)
+        }
+    }
 
     @PublishedApi
-    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any> iterate6(
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any> iterateN3(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
+        crossinline action: (Entity, A, B, C) -> Unit,
+    ) {
+        val sa = storeRaw(a) ?: return
+        val sb = storeRaw(b) ?: return
+        val sc = storeRaw(c) ?: return
+        for (id in sa.indices) {
+            if (!aliveAt(id)) continue
+            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
+            if (va == null || vb == null || vc == null) continue
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B, vc as C)
+        }
+    }
+
+    @PublishedApi
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any> iterateN4(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>, d: kotlin.reflect.KClass<D>,
+        crossinline action: (Entity, A, B, C, D) -> Unit,
+    ) {
+        val sa = storeRaw(a) ?: return
+        val sb = storeRaw(b) ?: return
+        val sc = storeRaw(c) ?: return
+        val sd = storeRaw(d) ?: return
+        for (id in sa.indices) {
+            if (!aliveAt(id)) continue
+            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id); val vd = sd.getOrNull(id)
+            if (va == null || vb == null || vc == null || vd == null) continue
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B, vc as C, vd as D)
+        }
+    }
+
+    @PublishedApi
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any> iterateN5(
+        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
+        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>,
+        crossinline action: (Entity, A, B, C, D, E2) -> Unit,
+    ) {
+        val sa = storeRaw(a) ?: return
+        val sb = storeRaw(b) ?: return
+        val sc = storeRaw(c) ?: return
+        val sd = storeRaw(d) ?: return
+        val se = storeRaw(e2) ?: return
+        for (id in sa.indices) {
+            if (!aliveAt(id)) continue
+            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
+            val vd = sd.getOrNull(id); val ve = se.getOrNull(id)
+            if (va == null || vb == null || vc == null || vd == null || ve == null) continue
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2)
+        }
+    }
+
+    @PublishedApi
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any> iterateN6(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
         d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
         crossinline action: (Entity, A, B, C, D, E2, F) -> Unit,
@@ -146,79 +233,31 @@ class EWorld constructor(builder: WorldBuilder) {
             val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
             val vd = sd.getOrNull(id); val ve = se.getOrNull(id); val vf = sf.getOrNull(id)
             if (va == null || vb == null || vc == null || vd == null || ve == null || vf == null) continue
-            @Suppress("UNCHECKED_CAST")
-            action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2, vf as F)
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2, vf as F)
         }
     }
 
     @PublishedApi
-    internal inline fun <reified A : Any, reified B : Any> iterate2(
-        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, crossinline action: (Entity, A, B) -> Unit,
-    ) {
-        val sa = storeRaw(a) ?: return
-        val sb = storeRaw(b) ?: return
-        for (id in sa.indices) {
-            if (!aliveAt(id)) continue
-            val va = sa[id]; val vb = sb.getOrNull(id)
-            if (va == null || vb == null) continue
-            @Suppress("UNCHECKED_CAST")
-            action(entityOf(id), va as A, vb as B)
-        }
-    }
-
-    @PublishedApi
-    internal inline fun <reified A : Any, reified B : Any, reified C : Any> iterate3(
+    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any, reified F : Any, reified G : Any> iterateN7(
         a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
-        crossinline action: (Entity, A, B, C) -> Unit,
-    ) {
-        val sa = storeRaw(a) ?: return
-        val sb = storeRaw(b) ?: return
-        val sc = storeRaw(c) ?: return
-        for (id in sa.indices) {
-            if (!aliveAt(id)) continue
-            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
-            if (va == null || vb == null || vc == null) continue
-            @Suppress("UNCHECKED_CAST")
-            action(entityOf(id), va as A, vb as B, vc as C)
-        }
-    }
-
-    @PublishedApi
-    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any> iterate4(
-        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>, d: kotlin.reflect.KClass<D>,
-        crossinline action: (Entity, A, B, C, D) -> Unit,
-    ) {
-        val sa = storeRaw(a) ?: return
-        val sb = storeRaw(b) ?: return
-        val sc = storeRaw(c) ?: return
-        val sd = storeRaw(d) ?: return
-        for (id in sa.indices) {
-            if (!aliveAt(id)) continue
-            val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id); val vd = sd.getOrNull(id)
-            if (va == null || vb == null || vc == null || vd == null) continue
-            @Suppress("UNCHECKED_CAST")
-            action(entityOf(id), va as A, vb as B, vc as C, vd as D)
-        }
-    }
-
-    @PublishedApi
-    internal inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E2 : Any> iterate5(
-        a: kotlin.reflect.KClass<A>, b: kotlin.reflect.KClass<B>, c: kotlin.reflect.KClass<C>,
-        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>,
-        crossinline action: (Entity, A, B, C, D, E2) -> Unit,
+        d: kotlin.reflect.KClass<D>, e2: kotlin.reflect.KClass<E2>, f: kotlin.reflect.KClass<F>,
+        g: kotlin.reflect.KClass<G>,
+        crossinline action: (Entity, A, B, C, D, E2, F, G) -> Unit,
     ) {
         val sa = storeRaw(a) ?: return
         val sb = storeRaw(b) ?: return
         val sc = storeRaw(c) ?: return
         val sd = storeRaw(d) ?: return
         val se = storeRaw(e2) ?: return
+        val sf = storeRaw(f) ?: return
+        val sg = storeRaw(g) ?: return
         for (id in sa.indices) {
             if (!aliveAt(id)) continue
             val va = sa[id]; val vb = sb.getOrNull(id); val vc = sc.getOrNull(id)
-            val vd = sd.getOrNull(id); val ve = se.getOrNull(id)
-            if (va == null || vb == null || vc == null || vd == null || ve == null) continue
-            @Suppress("UNCHECKED_CAST")
-            action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2)
+            val vd = sd.getOrNull(id); val ve = se.getOrNull(id); val vf = sf.getOrNull(id)
+            val vg = sg.getOrNull(id)
+            if (va == null || vb == null || vc == null || vd == null || ve == null || vf == null || vg == null) continue
+            @Suppress("UNCHECKED_CAST") action(entityOf(id), va as A, vb as B, vc as C, vd as D, ve as E2, vf as F, vg as G)
         }
     }
 

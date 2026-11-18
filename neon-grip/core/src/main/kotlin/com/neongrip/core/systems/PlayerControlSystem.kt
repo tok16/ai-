@@ -41,18 +41,18 @@ class PlayerControlSystem(
     }
 
     override fun update() {
-        world.iterate(PlayerTag::class, Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class) { _, pos, vel, rot, phase, cooldown ->
+        world.iterate(Position::class, Velocity::class, Rotation::class, PhaseShift::class, DashCooldown::class, PlayerTag::class) { _, pos, vel, rot, phase, cooldown, _ ->
 
             // ── Палец 1: движение (снап к 8 направлениям сделан в контроллере) ──
-            if (grip.moveVector.len2 > 0.01f) {
+            if (grip.moveVector.len2() > 0.01f) {
                 vel.vx = grip.moveVector.x * MOVE_SPEED
                 vel.vy = grip.moveVector.y * MOVE_SPEED
             }
 
             // ── Палец 2: прицел + автоматический огонь при отклонении стика ─────
-            if (grip.aimVector.len2 > 0.01f && !state.reloading.value) {
-                rot.degrees = atan2(grip.aimVector.y.toDouble(), grip.aimVector.x.toDouble())
-                    .toFloat() * 57.29578f
+            if (grip.aimVector.len2() > 0.01f && !state.reloading.value) {
+                rot.degrees = Math.toDegrees(
+                    atan2(grip.aimVector.y.toDouble(), grip.aimVector.x.toDouble())).toFloat()
                 fireTick += delta
                 if (fireTick >= FIRE_INTERVAL) {
                     fireTick = 0f
@@ -73,7 +73,7 @@ class PlayerControlSystem(
                 grip.isTriggerHeldLong() && !state.reloading.value -> startTacticalReload()
 
                 grip.consumeTriggerPress() && cooldown.ready -> {
-                    val dir = if (grip.moveVector.len2 > 0.01f) Vector2(grip.moveVector).nor()
+                    val dir = if (grip.moveVector.len2() > 0.01f) Vector2(grip.moveVector).nor()
                               else Vector2(1f, 0f)
                     phase.dashDir.set(dir)
                     phase.invulnRemaining = INVULN_SECONDS   // 0.5 сек неуязвимости
